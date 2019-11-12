@@ -1095,61 +1095,118 @@ class ApicKubeConfig(object):
         )
         if self.use_kubeapi_vlan:
             kubeapi_vlan = self.config["net_config"]["kubeapi_vlan"]
-            
-            data["infraAttEntityP"]["children"].append(
-                collections.OrderedDict(
-                    [
-                        (
-                            "infraGeneric",
-                            collections.OrderedDict(
-                                [
-                                    (
-                                        "attributes",
-                                        collections.OrderedDict([("name", "default")]),
-                                    ),
-                                    (
-                                        "children",
-                                        [
-                                            collections.OrderedDict(
-                                                [
-                                                    (
-                                                        "infraRsFuncToEpg",
-                                                        collections.OrderedDict(
-                                                            [
-                                                                (
-                                                                    "attributes",
-                                                                    collections.OrderedDict(
-                                                                        [
-                                                                            (
-                                                                                "tDn",
-                                                                                "uni/tn-%s/ap-kubernetes/epg-kube-nodes"
-                                                                                % (
-                                                                                    tn_name,
+            if self.config["aci_config"]["use_kube_naming_convention"]:
+                data["infraAttEntityP"]["children"].append(
+                    collections.OrderedDict(
+                        [
+                            (
+                                "infraGeneric",
+                                collections.OrderedDict(
+                                    [
+                                        (
+                                            "attributes",
+                                            collections.OrderedDict([("name", "default")]),
+                                        ),
+                                        (
+                                            "children",
+                                            [
+                                                collections.OrderedDict(
+                                                    [
+                                                        (
+                                                            "infraRsFuncToEpg",
+                                                            collections.OrderedDict(
+                                                                [
+                                                                    (
+                                                                        "attributes",
+                                                                        collections.OrderedDict(
+                                                                            [
+                                                                                (
+                                                                                    "tDn",
+                                                                                    "uni/tn-%s/ap-kubernetes/epg-kube-nodes"
+                                                                                    % (
+                                                                                        tn_name,
+                                                                                    ),
                                                                                 ),
-                                                                            ),
-                                                                            (
-                                                                                "encap",
-                                                                                "vlan-%s"
-                                                                                % (
-                                                                                    kubeapi_vlan,
+                                                                                (
+                                                                                    "encap",
+                                                                                    "vlan-%s"
+                                                                                    % (
+                                                                                        kubeapi_vlan,
+                                                                                    ),
                                                                                 ),
-                                                                            ),
-                                                                        ]
-                                                                    ),
-                                                                )
-                                                            ]
-                                                        ),
-                                                    )
-                                                ]
-                                            )
-                                        ],
-                                    ),
-                                ]
-                            ),
-                        )
-                    ]
+                                                                            ]
+                                                                        ),
+                                                                    )
+                                                                ]
+                                                            ),
+                                                        )
+                                                    ]
+                                                )
+                                            ],
+                                        ),
+                                    ]
+                                ),
+                            )
+                        ]
+                    )
                 )
-            )
+            else:
+                data["infraAttEntityP"]["children"].append(
+                    collections.OrderedDict(
+                        [
+                            (
+                                "infraGeneric",
+                                collections.OrderedDict(
+                                    [
+                                        (
+                                            "attributes",
+                                            collections.OrderedDict([("name", "default")]),
+                                        ),
+                                        (
+                                            "children",
+                                            [
+                                                collections.OrderedDict(
+                                                    [
+                                                        (
+                                                            "infraRsFuncToEpg",
+                                                            collections.OrderedDict(
+                                                                [
+                                                                    (
+                                                                        "attributes",
+                                                                        collections.OrderedDict(
+                                                                            [
+                                                                                (
+                                                                                    "tDn",
+                                                                                    "uni/tn-%s/ap-%s/epg-%s-nodes"
+                                                                                    % (
+                                                                                        tn_name,
+                                                                                        system_id,
+                                                                                        system_id,
+                                                                                    ),
+                                                                                ),
+                                                                                (
+                                                                                    "encap",
+                                                                                    "vlan-%s"
+                                                                                    % (
+                                                                                        kubeapi_vlan,
+                                                                                    ),
+                                                                                ),
+                                                                            ]
+                                                                        ),
+                                                                    )
+                                                                ]
+                                                            ),
+                                                        )
+                                                    ]
+                                                )
+                                            ],
+                                        ),
+                                    ]
+                                ),
+                            )
+                        ]
+                    )
+                )
 
         base = "/api/mo/uni/infra/attentp-%s" % aep_name
         rsvmm = base + "/rsdomP-[uni/vmmp-%s/dom-%s].json" % (vmm_type, vmm_name)
@@ -1187,10 +1244,16 @@ class ApicKubeConfig(object):
             self.annotateApicObjects(data)
             return path, data, rsvmm, rsnvmm, rsphy
         else:
-            rsfun = (
-                base + "/gen-default/rsfuncToEpg-"
-                "[uni/tn-%s/ap-kubernetes/epg-kube-nodes].json" % (tn_name)
-            )
+            if self.config["aci_config"]["use_kube_naming_convention"]:
+                rsfun = (
+                    base + "/gen-default/rsfuncToEpg-"
+                    "[uni/tn-%s/ap-kubernetes/epg-kube-nodes].json" % (tn_name)
+                )
+            else:
+                rsfun = (
+                    base + "/gen-default/rsfuncToEpg-"
+                    "[uni/tn-%s/ap-%s/epg-%s-nodes].json" % (tn_name, system_id, system_id)
+                )
             self.annotateApicObjects(data)
             return path, data, rsvmm, rsphy, rsfun
 
