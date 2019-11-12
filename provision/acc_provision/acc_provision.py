@@ -124,6 +124,11 @@ def config_default():
     default_config = {
         "aci_config": {
             "system_id": None,
+            "tenant": {
+                "name": None,
+            },
+            "use_pre_existing_tenant": False,
+            "use_kube_naming_convention": False,
             "vrf": {
                 "name": None,
                 "tenant": None,
@@ -277,7 +282,11 @@ def config_adjust(args, config, prov_apic, no_random):
     system_namespace = config["kube_config"]["system_namespace"]
     ep_registry = config["kube_config"]["ep_registry"]
     opflex_mode = config["kube_config"]["opflex_mode"]
-    tenant = system_id
+    if (config["aci_config"]["tenant"]["name"]):
+        config["aci_config"]["use_pre_existing_tenant"] = True
+        tenant = config["aci_config"]["tenant"]["name"]
+    else:
+        tenant = system_id
     token = str(uuid.uuid4())
     if args.version_token:
         token = args.version_token
@@ -655,6 +664,15 @@ def config_validate_preexisting(config, prov_apic):
             if l3out is None:
                 warn("L3out not defined in the APIC: %s/%s" %
                      (vrf_tenant, l3out_name))
+
+            kube_ap = apic.get_ap(config["aci_config"]["system_id"])
+            # if app profile withe name "kubernetes" exists under system
+            # tenant, this means the cluster was provisioned with older
+            # naming convention
+            if kube_ap:
+                config["aci_config"]["use_kube_naming_convention"] = True
+                print("WOOHOOOOOOOOOO")
+            print("NOHOOOOO")
 
     except Exception as e:
         warn("Unable to validate resources on APIC: '%s'" % e.message)

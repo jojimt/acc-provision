@@ -163,6 +163,10 @@ class Apic(object):
         path = "/api/node/mo/uni/userext/user-%s.json" % name
         return self.get_path(path)
 
+    def get_ap(self, tenant):
+        path = "/api/mo/uni/tn-%s/ap-kubernetes.json" % tenant
+        return self.get_path(path)
+
     def provision(self, data, sync_login):
         ignore_list = []
         if self.get_user(sync_login):
@@ -940,6 +944,7 @@ class ApicKubeConfig(object):
         infra_vlan = self.config["net_config"]["infra_vlan"]
         tn_name = self.config["aci_config"]["cluster_tenant"]
         vmm_type = self.config["aci_config"]["vmm_domain"]["type"]
+        system_id = self.config["aci_config"]["system_id"]
 
         path = "/api/mo/uni/infra.json"
         data = collections.OrderedDict(
@@ -1090,6 +1095,7 @@ class ApicKubeConfig(object):
         )
         if self.use_kubeapi_vlan:
             kubeapi_vlan = self.config["net_config"]["kubeapi_vlan"]
+            
             data["infraAttEntityP"]["children"].append(
                 collections.OrderedDict(
                     [

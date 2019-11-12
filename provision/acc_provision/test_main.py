@@ -39,6 +39,15 @@ def test_base_case():
 
 
 @in_testdir
+def test_base_case_preexisting_tenant():
+    run_provision(
+        "with_preexisting_tenant.inp.yaml",
+        None,
+        None
+    )
+
+
+@in_testdir
 def test_base_case_snat():
     run_provision(
         "base_case_snat.inp.yaml",
