@@ -290,6 +290,7 @@ class ApicKubeConfig(object):
         self.config = config
         self.use_kubeapi_vlan = True
         if self.config["aci_config"]["use_kube_naming_convention"]:
+            print("WOOGOOOOOOOOOOOOOOOo")
             self.tenant_generator = "kube_tn" #use the older kube naming convention
         else:
             self.tenant_generator = "cluster_tn"
@@ -350,15 +351,17 @@ class ApicKubeConfig(object):
         update(data, self.kube_cert())
         return data
 
-    def annotateApicObjects(self, data):
+    def annotateApicObjects(self, data, pre_existing_tenant=False):
         for key, value in data.items():
             if "children" in value.keys():
                 children = value["children"]
                 for i in range(len(children)):
                     self.annotateApicObjects(children[i])
             break
-        if not (key == "fvTenant" and data[key]["attributes"]["name"] == "common"):
-            data[key]["attributes"]["annotation"] = aciContainersOwnerAnnotation
+        if not key == "fvTenant":
+           data[key]["attributes"]["annotation"] = aciContainersOwnerAnnotation
+        elif not (data[key]["attributes"]["name"] == "common") and not (pre_existing_tenant):
+           data[key]["attributes"]["annotation"] = aciContainersOwnerAnnotation 
 
     def pdom_pool(self):
         pool_name = self.config["aci_config"]["physical_domain"]["vlan_pool"]
@@ -1652,6 +1655,7 @@ class ApicKubeConfig(object):
     def kube_tn(self, flavor):
         system_id = self.config["aci_config"]["system_id"]
         tn_name = self.config["aci_config"]["cluster_tenant"]
+        pre_existing_tenant = self.config["aci_config"]["use_pre_existing_tenant"]
         vmm_name = self.config["aci_config"]["vmm_domain"]["domain"]
         phys_name = self.config["aci_config"]["physical_domain"]["domain"]
         kubeapi_vlan = self.config["net_config"]["kubeapi_vlan"]
@@ -3386,12 +3390,13 @@ class ApicKubeConfig(object):
                 openshift_flavor_specific_handling(data, items)
             elif flavor == "docker-ucp-3.0":
                 dockerucp_flavor_specific_handling(data, items)
-        self.annotateApicObjects(data)
+        self.annotateApicObjects(data, pre_existing_tenant)
         return path, data
 
     def cluster_tn(self, flavor):
         system_id = self.config["aci_config"]["system_id"]
         tn_name = self.config["aci_config"]["cluster_tenant"]
+        pre_existing_tenant = self.config["aci_config"]["use_pre_existing_tenant"]
         vmm_name = self.config["aci_config"]["vmm_domain"]["domain"]
         phys_name = self.config["aci_config"]["physical_domain"]["domain"]
         kubeapi_vlan = self.config["net_config"]["kubeapi_vlan"]
@@ -5126,7 +5131,7 @@ class ApicKubeConfig(object):
                 openshift_flavor_specific_handling(data, items)
             elif flavor == "docker-ucp-3.0":
                 dockerucp_flavor_specific_handling(data, items, system_id)
-        self.annotateApicObjects(data)
+        self.annotateApicObjects(data, pre_existing_tenant)
         return path, data
 
     def epg(
