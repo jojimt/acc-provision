@@ -188,8 +188,9 @@ class Apic(object):
                 self.errors += 1
                 err("Error in provisioning %s: %s" % (path, str(e)))
 
-    def unprovision(self, data, system_id, tenant, vrf_tenant):
-        shared_resources = ["/api/mo/uni/infra.json", "/api/mo/uni/tn-common.json"]
+    def unprovision(self, data, system_id, tenant, vrf_tenant, cluster_tenant):
+        cluster_tenant_path = "/api/mo/uni/tn-%s.json" % cluster_tenant
+        shared_resources = ["/api/mo/uni/infra.json", "/api/mo/uni/tn-common.json", cluster_tenant_path]
 
         if vrf_tenant not in ["common", system_id]:
             shared_resources.append("/api/mo/uni/tn-%s.json" % vrf_tenant)
@@ -199,16 +200,49 @@ class Apic(object):
                 if path.split("/")[-1].startswith("instP-"):
                     continue
                 if path not in shared_resources:
+                    print(path)
                     resp = self.delete(path)
                     self.check_resp(resp)
                     dbg("%s: %s" % (path, resp.text))
+                else:
+                   if path == cluster_tenant_path:
+                       path += "?query-target=children"
+                       resp = self.get(path)
+                       self.check_resp(resp)
+                       respj = json.loads(resp.text)
+                       respj = respj["imdata"]
+                       for resp in respj:
+                           for val in resp.values():
+                               del_path = "/api/node/mo/" + val['attributes']['dn'] + ".json"
+                               if "rsTenantMonPol" not in del_path and "svcCont" not in del_path:
+                                   resp = self.delete(del_path)
+                                   self.check_resp(resp)
+                                   dbg("%s: %s" % (del_path, resp.text))
             except Exception as e:
                 # log it, otherwise ignore it
                 self.errors += 1
                 err("Error in un-provisioning %s: %s" % (path, str(e)))
 
+        # Clean the cluster tenant iff it has our annotation and does
+        # not have any application profiles
+#        if self.check_valid_annotation(cluster_tenant_path) and self.check_no_ap(cluster_tenant_path):
+#            self.delete(cluster_tenant_path)
+
         # Finally clean any stray resources in common
         self.clean_tagged_resources(system_id, tenant)
+
+    def check_valid_annotation(self, path):
+        data = self.get_path(path)
+        if data['fvTenant']['attributes']['annotation'] == aciContainersOwnerAnnotation :
+            return True
+        return False
+
+    def check_no_ap(self, path):
+        #fix this to check specifically for fvAp
+        path += "?query-target=children"
+        if len(path) > 0 :
+            return True
+        return False
 
     def valid_tagged_resource(self, tag, system_id, tenant):
         ret = False
@@ -290,7 +324,6 @@ class ApicKubeConfig(object):
         self.config = config
         self.use_kubeapi_vlan = True
         if self.config["aci_config"]["use_kube_naming_convention"]:
-            print("WOOGOOOOOOOOOOOOOOOo")
             self.tenant_generator = "kube_tn" #use the older kube naming convention
         else:
             self.tenant_generator = "cluster_tn"
