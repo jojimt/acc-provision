@@ -887,7 +887,8 @@ def generate_apic_config(flavor_opts, config, prov_apic, apic_file):
                 tenant = config["aci_config"]["vrf"]["tenant"]
                 vrf_tenant = config["aci_config"]["vrf"]["tenant"]
                 cluster_tenant = config["aci_config"]["cluster_tenant"]
-                apic.unprovision(apic_config, system_id, tenant, vrf_tenant, cluster_tenant)
+                old_naming = config["aci_config"]["use_kube_naming_convention"]
+                apic.unprovision(apic_config, system_id, tenant, vrf_tenant, cluster_tenant, old_naming)
             ret = False if apic.errors > 0 else True
     return ret
 

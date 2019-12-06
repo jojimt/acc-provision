@@ -51,6 +51,7 @@ def aci_obj(klass, pair_list):
 
 
 class Apic(object):
+    TENANT_OBJECTS=["ap-kubernetes", "BD-kube-node-bd", "BD-kube-pod-bd", "brc-kube-api", "brc-health-check", "brc-dns", "brc-icmp", "flt-kube-api-filter", "flt-dns-filter", "flt-health-check-filter-out", "flt-icmp-filter", "flt-health-check-filter-in"]
     def __init__(
         self,
         addr,
@@ -188,7 +189,9 @@ class Apic(object):
                 self.errors += 1
                 err("Error in provisioning %s: %s" % (path, str(e)))
 
-    def unprovision(self, data, system_id, tenant, vrf_tenant, cluster_tenant):
+    def unprovision(self, data, system_id, tenant, vrf_tenant, cluster_tenant, old_naming):
+        print(tenant)
+        print(old_naming)
         cluster_tenant_path = "/api/mo/uni/tn-%s.json" % cluster_tenant
         shared_resources = ["/api/mo/uni/infra.json", "/api/mo/uni/tn-common.json", cluster_tenant_path]
 
@@ -200,7 +203,7 @@ class Apic(object):
                 if path.split("/")[-1].startswith("instP-"):
                     continue
                 if path not in shared_resources:
-                    print(path)
+                    print("first del path is :"+path)
                     resp = self.delete(path)
                     self.check_resp(resp)
                     dbg("%s: %s" % (path, resp.text))
@@ -215,9 +218,23 @@ class Apic(object):
                            for val in resp.values():
                                del_path = "/api/node/mo/" + val['attributes']['dn'] + ".json"
                                if "rsTenantMonPol" not in del_path and "svcCont" not in del_path:
-                                   resp = self.delete(del_path)
-                                   self.check_resp(resp)
-                                   dbg("%s: %s" % (del_path, resp.text))
+                                  print("second del path is :"+del_path)
+                                  if not old_naming:
+                                      print("NEW NAMING CONVENTION")
+                                      if system_id in del_path:
+                                          print("NEW NAMING CONVENTION")
+                                          print("second del path is :"+del_path)
+                                          resp = self.delete(del_path)
+                                          self.check_resp(resp)
+                                          dbg("%s: %s" % (del_path, resp.text))
+                                  else:
+                                      print("ild naming convention delete path")
+                                      for object in self.TENANT_OBJECTS:
+                                          del_path = "/api/node/mo/uni/tn-%s.json/%s.json" % (cluster_tenant, object)
+                                          resp = self.delete(del_path)
+                                          self.check_resp(resp)
+                                          dbg("%s: %s" % (del_path, resp.text))  
+                                       
             except Exception as e:
                 # log it, otherwise ignore it
                 self.errors += 1
