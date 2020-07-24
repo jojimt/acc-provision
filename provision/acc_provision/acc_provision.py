@@ -1806,6 +1806,10 @@ def provision(args, apic_file, no_random):
         print("\nOpenshift Info")
         print("----------------")
         print("networking:\n  clusterNetwork:\n  - cidr: {}\n    hostPrefix: 23\n  machineCIDR: {}\n  networkType: CiscoACI\n  serviceNetwork:\n  - 172.30.0.0/16\nplatform:\n  aws:\n    region: {}\n    subnets:\n    - {}\n    - {}".format(p_subnet, m_cidr, region, boot_subnetID, node_subnetID))
+        aci_rc = open(".acirc", "w")
+        aci_rc.write('export AZ_CAPIC_SUBNET_ID="{}"\nexport AZ_CAPIC_REGION="{}"\n'.format(boot_subnetID, region))
+        aci_rc.close()
+        print("Copy .acirc and akscni.yaml to your opflex-demo-deployment/k8s-azure-aks directory")
         apic.save()
         return True
 
